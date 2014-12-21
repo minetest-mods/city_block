@@ -47,6 +47,18 @@ function city_block:in_city(pos)
     return false
 end
 
+function city_block:city_boundaries(pos)
+    for i, EachBlock in ipairs(self.blocks) do
+        if (pos.x == (EachBlock.pos.x - 21) or pos.x == (EachBlock.pos.x + 21)) and pos.z > (EachBlock.pos.z - 22) and pos.z < (EachBlock.pos.z + 22 ) then
+            return true
+        end
+        if (pos.z == (EachBlock.pos.z - 21) or pos.z == (EachBlock.pos.z + 21)) and pos.x > (EachBlock.pos.x - 22) and pos.x < (EachBlock.pos.x + 22 ) then
+            return true
+        end
+    end
+    return false
+end
+
 city_block:load()
 
 minetest.register_node("city_block:cityblock", {
@@ -129,3 +141,15 @@ minetest.register_on_dieplayer(
 		end
 	end
 )
+
+--do not let lava flow across boundary of city block
+minetest.register_abm({
+	nodenames = {"default:lava_flowing"},
+	interval = 5,
+	chance = 1,
+	action = function(pos, node, active_object_count, active_object_count_wider)
+        if pos.y>14 and city_block:city_boundaries(pos) then
+            minetest.set_node(pos, {name="default:stone"})
+        end
+	end,
+})
