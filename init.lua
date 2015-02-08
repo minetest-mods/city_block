@@ -68,7 +68,7 @@ minetest.register_node("city_block:cityblock", {
 	groups = {cracky=1,level=3},
     is_ground_content = false,
 	light_source = LIGHT_MAX,
-    walkable = false,
+
     after_place_node = function(pos, placer)
         if placer and placer:is_player() then
             table.insert(city_block.blocks, {pos=vector.round(pos), owner=placer:get_player_name()} )
