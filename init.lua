@@ -1,5 +1,6 @@
 -- Minetest mod "City block"
 -- City block disables use of water/lava buckets and also sends aggressive players to jail
+--2016.02 - improvements suggested by rnd. removed spawn_jailer support. some small fixes and improvements.
 
 --This library is free software; you can redistribute it and/or
 --modify it under the terms of the GNU Lesser General Public
@@ -9,7 +10,6 @@
 city_block={}
 city_block.blocks={}
 city_block.filename = minetest.get_worldpath() .. "/city_blocks.txt"
-city_block.suspects={}
 
 function city_block:save()
     local datastring = minetest.serialize(self.blocks)
@@ -116,31 +116,84 @@ minetest.registered_craftitems["bucket:bucket_lava"].on_place=function(itemstack
 	end
 end
 
-minetest.register_on_dieplayer(
-	function(player)
-		pos=player:getpos()
-		if city_block:in_city(pos) and not(pos.x>-25 and pos.x<25 and pos.y>-5 and pos.y<25 and pos.z>-25 and pos.z<25) then
-			for _,suspect in pairs(minetest.get_objects_inside_radius(pos, 3.8)) do
-				if suspect:is_player() and suspect:get_player_name()~=player:get_player_name() then
-					suspect_name=suspect:get_player_name()
-					if city_block.suspects[suspect_name] then
-						if city_block.suspects[suspect_name]>3 then
-							suspect:setpos( {x=0, y=-2, z=0} )
-							minetest.chat_send_all("Player "..suspect_name.." sent to jail as suspect for killing in town")
-							minetest.log("action", "Player "..suspect_name.." warned for killing in town")
-							city_block.suspects[suspect_name]=1
-						else
-							city_block.suspects[suspect_name]=city_block.suspects[suspect_name]+1
-						end
-					else
-						city_block.suspects[suspect_name]=1
-					end
-					return false
-				end
-			end
-		end
-	end
-)
+if minetest.register_on_punchplayer then    --new way of finding attackers, not even in wiki yet.
+    city_block.attacker = {};
+    city_block.attack = {};
+    minetest.register_on_punchplayer(
+    	function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
+            if not player:is_player() or not hitter:is_player() then
+                return;
+            end
+    		local pname = player:get_player_name();
+            local name = hitter:get_player_name();
+    		local t = minetest.get_gametime() or 0;
+    		city_block.attacker[pname] = name;
+            city_block.attack[pname] = t;
+    		local hp = player:get_hp();
+
+    		if (hp - damage) <= 0 then -- player will die
+    			local pos = player:getpos()
+
+    			if city_block:in_city(pos) then
+    				local t0 = city_block.attack[name] or t;
+                    t0 = t - t0;
+    				if not city_block.attacker[name] then city_block.attacker[name] = "" end
+    				--minetest.chat_send_all(" killers attacker ".. city_block.attacker[name] .. " attacked before " .. t0)
+    				if city_block.attacker[name]==pname and t0 < 10 then -- justified killing 10 seconds after provocation
+    					return
+    				else -- go to jail
+                        -- --spawn killer, drop items for punishment
+    					-- local hitter_inv = hitter:get_inventory();
+                        -- pos.y = pos.y + 1
+    					-- if hittern_inv then
+    					-- 	-- drop items instead of delete
+    					-- 	for i=1, hitter_inv:get_size("main") do
+    					-- 		minetest.add_item(pos, hitter_inv:get_stack("main", i))
+    					-- 	end
+    					-- 	for i=1, hitter_inv:get_size("craft") do
+    					-- 		minetest.add_item(pos, hitter_inv:get_stack("craft", i))
+    					-- 	end
+    					-- 	-- empty lists main and craft
+    					-- 	hitter_inv:set_list("main", {})
+    					-- 	hitter_inv:set_list("craft", {})
+    					-- end
+    					hitter:setpos( {x=0, y=-2, z=0} )
+    					minetest.chat_send_all("Player "..name.." sent to jail for killing " .. pname .." without reason in town")
+    					minetest.log("action", "Player "..name.." warned for killing in town")
+    				end
+    			end
+    		end
+        end
+    )
+else    --old, deprecated way of checking. compatible for
+    city_block.suspects = {}
+    minetest.register_on_dieplayer(
+    	function(player)
+    		local pos=player:getpos()
+    		if city_block:in_city(pos) then
+    			for _,suspect in pairs(minetest.get_objects_inside_radius(pos, 3.8)) do
+    				if suspect:is_player() and suspect:get_player_name()~=player:get_player_name() then
+    					suspect_name=suspect:get_player_name()
+    					if city_block.suspects[suspect_name] then
+    						if city_block.suspects[suspect_name]>3 then
+    							suspect:setpos( {x=0, y=-2, z=0} )
+    							minetest.chat_send_all("Player "..suspect_name.." sent to jail as suspect for killing in town")
+    							minetest.log("action", "Player "..suspect_name.." warned for killing in town")
+    							city_block.suspects[suspect_name]=1
+    						else
+    							city_block.suspects[suspect_name]=city_block.suspects[suspect_name]+1
+    						end
+    					else
+    						city_block.suspects[suspect_name]=1
+    					end
+    					return false
+    				end
+    			end
+    		end
+    	end
+    )
+end
+
 
 --do not let lava flow across boundary of city block
 minetest.register_abm({
