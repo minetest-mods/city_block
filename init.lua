@@ -131,7 +131,7 @@ if minetest.register_on_punchplayer then    --new way of finding attackers, not 
             city_block.attack[pname] = t;
     		local hp = player:get_hp();
 
-    		if (hp - damage) <= 0 then -- player will die
+    		if hp > 0 and (hp - damage) <= 0 then -- player will die because of this hit
     			local pos = player:getpos()
 
     			if city_block:in_city(pos) then
