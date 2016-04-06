@@ -1,0 +1,1 @@
+City block disables use of water/lava buckets and also sends aggressive players to jail.
