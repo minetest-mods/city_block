@@ -116,9 +116,18 @@ minetest.registered_craftitems["bucket:bucket_lava"].on_place=function(itemstack
 	end
 end
 
+function city_block:additional_jail(parameters)
+    local name = parameters[1]
+    local player = minetest.get_player_by_name(name)
+    if player:is_player() then
+        player:setpos( {x=0, y=-2, z=0} )
+    end
+end
+
 if minetest.register_on_punchplayer then    --new way of finding attackers, not even in wiki yet.
     city_block.attacker = {};
     city_block.attack = {};
+    city_block.suspects = {}
     minetest.register_on_punchplayer(
     	function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
             if not player:is_player() or not hitter:is_player() then
@@ -157,6 +166,27 @@ if minetest.register_on_punchplayer then    --new way of finding attackers, not 
     					-- 	hitter_inv:set_list("main", {})
     					-- 	hitter_inv:set_list("craft", {})
     					-- end
+
+                        --do something with adwanced griefers
+
+                        if city_block.suspects[name] then
+                            city_block.suspects[name]=city_block.suspects[name] + 1
+                        else
+                            city_block.suspects[name] = 1
+                        end
+
+                        if city_block.suspects[name] > 40 then
+                            minetest.after(3.0, city_block.additional_jail, {name})
+                            minetest.after(6.0, city_block.additional_jail, {name})
+                            minetest.after(10.0, city_block.additional_jail, {name})
+                            minetest.after(16.0, city_block.additional_jail, {name})
+                        elseif city_block.suspects[name] > 20 then
+                            minetest.after(3.0, city_block.additional_jail, {name})
+                            minetest.after(6.0, city_block.additional_jail, {name})
+                        elseif city_block.suspects[name] > 10 then
+                            minetest.after(3.0, city_block.additional_jail, {name})
+                        end
+
     					hitter:setpos( {x=0, y=-2, z=0} )
     					minetest.chat_send_all("Player "..name.." sent to jail for killing " .. pname .." without reason in town")
     					minetest.log("action", "Player "..name.." warned for killing in town")
