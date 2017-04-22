@@ -116,7 +116,7 @@ minetest.registered_craftitems["bucket:bucket_lava"].on_place=function(itemstack
 	end
 end
 
-function city_block:additional_jail(parameters)
+function city_block.additional_jail(parameters)
     local name = parameters[1]
     local player = minetest.get_player_by_name(name)
     if player:is_player() then
